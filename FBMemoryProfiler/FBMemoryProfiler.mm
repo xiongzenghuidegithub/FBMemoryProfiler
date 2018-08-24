@@ -21,37 +21,43 @@
 static const NSUInteger kFBFloatingButtonSize = 52.0;
 static const CGFloat KFBMemoryProfilerDesignatedHeight = 230;
 
+// 实现 FBMemoryProfilerWindowTouchesHandling 协议，接收window点击事件的处理
 @interface FBMemoryProfiler () <FBMemoryProfilerWindowTouchesHandling>
-
+/// 显示log信息的悬浮窗口window
 @property (nonatomic, strong) FBMemoryProfilerWindow *memoryProfilerWindow;
-
 @end
 
 @implementation FBMemoryProfiler
 {
+  // Debug UI
   FBMemoryProfilerViewController *_profilerViewController;
   FBMemoryProfilerFloatingButtonController *_floatingButtonController;
-
   FBMemoryProfilerContainerViewController *_containerViewController;
 
+  // 保存配置
   FBMemoryProfilerOptions *_options;
   FBObjectGraphConfiguration *_retainCycleDetectorConfiguration;
 }
 
 - (instancetype)init
 {
-  return   [self initWithPlugins:nil
-retainCycleDetectorConfiguration:nil];
+  return [self initWithPlugins:nil retainCycleDetectorConfiguration:nil];
 }
 
 - (instancetype)initWithPlugins:(NSArray<id<FBMemoryProfilerPluggable>> *)plugins
 retainCycleDetectorConfiguration:(FBObjectGraphConfiguration *)retainCycleDetectorConfiguration
 {
-  if (self = [super init]) {
+  if (self = [super init])
+  {
     _presentationMode = FBMemoryProfilerPresentationModeFullWindow;
-    _options = [[FBMemoryProfilerOptions alloc] initWithSortingMode:FBMemoryProfilerSortByClass
-                                                       sortingOrder:FBMemoryProfilerSortingOrderAscending
-                                                            plugins:plugins];
+    
+    // 1、FBMemoryProfilerOptions
+    _options = [[FBMemoryProfilerOptions alloc] initWithSortingMode:FBMemoryProfilerSortByClass // 按照class排序
+                                                       sortingOrder:FBMemoryProfilerSortingOrderAscending // 升序排序
+                                                            plugins:plugins // id<FBMemoryProfilerPluggable> plugins
+                ];
+    
+    // 2、FBObjectGraphConfiguration
     _retainCycleDetectorConfiguration = retainCycleDetectorConfiguration;
   }
 
@@ -65,17 +71,22 @@ retainCycleDetectorConfiguration:(FBObjectGraphConfiguration *)retainCycleDetect
   // Put Memory profiler in status bar but save window for future reference when showing on screen
   _enabled = YES;
 
+  /**
+   * 1、启动 AllocationTracker
+   * - 1）FB::AllocationTracker::enableGenerations();
+   * - 2）FB::AllocationTracker::markGeneration();
+   */
   [[FBAllocationTrackerManager sharedManager] enableGenerations];
 
+  // 2、显示 Debug UI
   _containerViewController = [FBMemoryProfilerContainerViewController new];
-
   _memoryProfilerWindow = [[FBMemoryProfilerWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
   _memoryProfilerWindow.touchesDelegate = self;
   _memoryProfilerWindow.rootViewController = _containerViewController;
   _memoryProfilerWindow.hidden = NO;
-
   self.presentationMode = FBMemoryProfilerPresentationModeCondensed;
-
+  
+  // 3、回调所有plugin，通知memoryProfiler已经被ennable
   [_options.plugins enumerateObjectsUsingBlock:^(id<FBMemoryProfilerPluggable> plugin,
                                                  NSUInteger idx,
                                                  BOOL *stop) {
@@ -87,6 +98,7 @@ retainCycleDetectorConfiguration:(FBObjectGraphConfiguration *)retainCycleDetect
 
 - (void)disable
 {
+  // 1、回调所有plugin，通知memoryProfiler已经被disable
   [_options.plugins enumerateObjectsUsingBlock:^(id<FBMemoryProfilerPluggable> plugin,
                                                  NSUInteger idx,
                                                  BOOL *stop) {
@@ -94,10 +106,14 @@ retainCycleDetectorConfiguration:(FBObjectGraphConfiguration *)retainCycleDetect
       [plugin memoryProfilerDidDisable];
     }
   }];
-
+  
+  // 2、关闭 Debug UI
   self.presentationMode = FBMemoryProfilerPresentationModeDisabled;
   _memoryProfilerWindow = nil;
+  
+  // 3、关闭 AllocationTracker
   [[FBAllocationTrackerManager sharedManager] disableGenerations];
+  
   _enabled = NO;
 }
 
@@ -168,14 +184,14 @@ retainCycleDetectorConfiguration:(FBObjectGraphConfiguration *)retainCycleDetect
   _floatingButtonController = nil;
 }
 
-#pragma mark - FBMemoryProfilerPresentationModeDelegate
+#pragma mark - FBMemoryProfilerPresentationModeDelegate（Protocol实现）
 
 - (void)presentationDelegateChangePresentationModeToMode:(FBMemoryProfilerPresentationMode)mode
 {
   self.presentationMode = mode;
 }
 
-#pragma mark - FBMemoryProfilerWindowTouchesHandling
+#pragma mark - FBMemoryProfilerWindowTouchesHandling（Protocol实现）
 
 - (BOOL)window:(UIWindow *)window shouldReceiveTouchAtPoint:(CGPoint)point
 {

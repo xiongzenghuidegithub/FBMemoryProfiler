@@ -48,6 +48,7 @@ static NSString *const kFacebookOpenSourceReusableIdentifier = @"kFacebookOpenSo
   _tableView.delegate = self;
   _tableView.dataSource = self;
   
+#if 0
   NSURL *url = [NSURL URLWithString:@"https://api.github.com/orgs/facebook/repos?per_page=300"];
   NSURLSession *session = [NSURLSession sessionWithConfiguration:
                            [NSURLSessionConfiguration defaultSessionConfiguration]];
@@ -68,17 +69,32 @@ static NSString *const kFacebookOpenSourceReusableIdentifier = @"kFacebookOpenSo
            });
          }];
   [task resume];
+#else
+  [self _parseData:nil];
+  [_tableView reloadData];
+#endif
 }
 
 - (void)_parseData:(NSArray *)data
 {
   NSMutableArray<GithubRepository *> *parsedData = [NSMutableArray array];
+#if 0
   for (NSDictionary *repository in data) {
+    if (![repository isKindOfClass:[NSDictionary class]])
+      continue;
     GithubRepository *githubRepository =
     [[GithubRepository alloc] initWithName:repository[@"name"]
                           shortDescription:repository[@"description"]
                                        url:[NSURL URLWithString:repository[@"html_url"]]];
     [parsedData addObject:githubRepository];
+#else
+  for (int i=0; i<30; i++) {
+    GithubRepository *githubRepository =
+    [[GithubRepository alloc] initWithName:@"name"
+                          shortDescription:@"description"
+                                       url:[NSURL URLWithString:@"https://www.baidu.com"]];
+    [parsedData addObject:githubRepository];
+#endif
   }
   
   _data = [parsedData copy];

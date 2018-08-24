@@ -209,6 +209,7 @@
 - (UIViewController *)_viewControllerDecidingAboutRotations
 {
 #if _INTERNAL_IMP_ENABLED
+    NSLog(@"1");
   UIWindow *window = [[UIApplication sharedApplication] keyWindow];
   UIViewController *viewController = window.rootViewController;
   SEL viewControllerForSupportedInterfaceOrientationsSelector =
@@ -221,6 +222,7 @@
   }
   return viewController;
 #else
+    NSLog(@"2");
   return self;
 #endif // _INTERNAL_IMP_ENABLED
 }
